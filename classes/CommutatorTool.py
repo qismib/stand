@@ -143,6 +143,33 @@ class PauliCommutators():
         
         return
     
+    def mulscal_pstr(self, scalar, pstr):
+        '''
+        implements multiplication by scalar for a pstr (list of tuples (numerical coefficient, couplings, individual Pauli string)) 
+        scalar (float)
+        '''
+        print(pstr[0][0])
+        return [(str(float((elem[0][0].real))*scalar), elem[1], elem[2]) for elem in pstr]
+    
+    def sum_pstr(self, pstr1, pstr2):
+        '''
+        pstr1, pstr2 (list of tuples): [(numeric coefficient, couplings, individual Pauli string), ...]
+        Sums pstr1 and pstr2 taking care of refactoring numerical coefficients.
+        return pstr1+pstr2
+        '''
+
+        grouped = {}
+
+        for coeff, couplings, pauli in pstr1+pstr2:
+            key = (couplings, pauli)
+            if key in grouped:
+                grouped[key] += coeff
+            else:
+                grouped[key] = coeff
+
+        return [(coeff, key[0], key[1]) for key, coeff in grouped.items() if coeff != 0]
+
+    
 
 
 # ---------------------------------------- CommutatorNorms ----------------------------------------

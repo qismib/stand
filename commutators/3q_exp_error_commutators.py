@@ -135,15 +135,16 @@ def main():
     coeffsV.append((coeffV_ZIZ, "ZIZ"))
     coeffsV.append((coeffV_IZZ, "IZZ"))
 
-    print("Second order contributions:")
-    ctl3.nice_print(coeffsU, "U term: (coeff 1/12)")
-    ctl3.nice_print(coeffsV, "V term: (coeff -1/24)")
-
     # TODO: - implement scalar multiplication
     #       - compute directly 1/12 U - 1/24 V with all the necessary refactoring
     
 
+    coeffsU = [ctl3.mulscal_pstr(+1/12, elem) for elem in coeffsU]
+    coeffsV = [ctl3.mulscal_pstr(-1/24, elem) for elem in coeffsV]
 
+    sum = ctl3.sum_pstr(coeffsU, coeffsV)
+    ctl3.nice_print(sum, "Second order contributions:")
+    
 
 if __name__ == "__main__":
     main()
