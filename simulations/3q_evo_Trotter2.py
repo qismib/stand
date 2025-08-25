@@ -18,7 +18,7 @@ def main():
     g13 = 2e-1
     g23 = 1e-1
 
-    tlist = np.linspace(0, 10, 1000)
+    tlist = np.linspace(0, 50, 1000)
 
     sx1 = qt.tensor(qt.sigmax(), qt.qeye(2), qt.qeye(2))
     sy1 = qt.tensor(qt.sigmay(), qt.qeye(2), qt.qeye(2))
@@ -117,7 +117,6 @@ def main():
     plt.tight_layout()
     fig.savefig(f'..\\plots\\3q_evo_Trotter2\\fidelity_evo.pdf', dpi=300)
     plt.close(fig)
-
 
 
 if __name__ == "__main__":
