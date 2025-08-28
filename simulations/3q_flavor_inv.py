@@ -26,7 +26,7 @@ def main():
     g13 = 1e-1
     g23 = 1e-2
 
-    tlist = np.linspace(0, 100, 10000)
+    tlist = np.linspace(0, 20, 10000)
 
     # one-qubit operators
     sx1 = qt.tensor(qt.sigmax(), qt.qeye(2), qt.qeye(2))
@@ -48,20 +48,25 @@ def main():
     H_Heisenberg = (np.sin(2*theta_nu)*sx1 - np.cos(2*theta_nu)*sz1) + (np.sin(2*theta_nu)*sx2 - np.cos(2*theta_nu)*sz2) + (np.sin(2*theta_nu)*sx3 - np.cos(2*theta_nu)*sz3) # free Hamiltonian
     H_Heisenberg = g12*(sx1*sx2 + sy1*sy2 + sz1*sz2) + g13*(sx1*sx3 + sy1*sy3 + sz1*sz3) + g23*(sx2*sx3 + sy2*sy3 + sz2*sz3) # interaction Hamiltonian
 
-    H_Trotter1 = H_Heisenberg
-    H_Trotter1  = 0.25 * (sx1*sz2*sy3 + sz1*sx2*sy3) * (g12*g13+g12*g23-3*g13*g23)
-    H_Trotter1 += 0.25 * (sx1*sy2*sz3 + sz1*sy2*sz3) * (g12*g13+g13*g23-3*g12*g23)
-    H_Trotter1 += 0.25 * (sy1*sx2*sz3 + sy1*sz2*sx3) * (g12*g23+g13*g23-3*g12*g13)
+    E_Trotter1  = 0.25 * (sx1*sz2*sy3 + sz1*sx2*sy3) * (g12*g13+g12*g23-3*g13*g23)
+    E_Trotter1 += 0.25 * (sx1*sy2*sz3 + sz1*sy2*sz3) * (g12*g13+g13*g23-3*g12*g23)
+    E_Trotter1 += 0.25 * (sy1*sx2*sz3 + sy1*sz2*sx3) * (g12*g23+g13*g23-3*g12*g13)
 
-    H_Trotter2  = H_Heisenberg
-    H_Trotter2 += sx1*sx2 * (13*g12*g13**2/48 - 11*g13**2*g23/48 - 1*g12*g13*g23/24 + 13*g12*g23**2/48 - 11*g13*g23**2/48)
-    H_Trotter2 += sx1*sx3 * (13*g12**2*g13/48 - 11*g12**2*g23/48 - 1*g12*g13*g23/24 + 13*g13*g23**2/48 - 11*g12*g23**2/48)
-    H_Trotter2 += sx2*sx3 * (13*g12**2*g23/48 - 11*g12**2*g13/48 - 1*g12*g13*g23/24 + 13*g13**2*g23/48 - 11*g12*g13**2/48)
-    H_Trotter2 += sy1*sy2 * (1*g12*g13**2/12  - 1*g13**2*g23/24  - 1*g12*g13*g23/6  + 1*g12*g23**2/12  - 1*g13*g23**2/24 )
-    H_Trotter2 += sy1*sy3 * (1*g12**2*g13/12  - 1*g12**2*g23/24  - 1*g12*g13*g23/6  + 1*g13*g23**2/12  - 1*g12*g23**2/24 )
-    H_Trotter2 += sy2*sy3 * (1*g13**2*g23/12  - 1*g12**2*g13/24  - 1*g12*g13*g23/6  + 1*g12**2*g23/8   - 1*g12*g13**2/12 ) # different pattern
-    H_Trotter2 += sz1*sz2 * (13*g13**2*g23/48 + 13*g13**2*g23/48 - 1*g12*g13*g23/24 - 11*g12*g13**2/48 - 11*g12*g23**2/48)
-    H_Trotter2 += sz1*sz3 * (13*g12**2*g13/48 + 13*g12*g13**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g23/48 - 11*g13**2*g23/48)
+    def H_Trotter1(t, args):
+        return H_Heisenberg + E_Trotter1*t
+
+    E_Trotter2  = sx1*sx2 * (13*g12*g13**2/48 - 11*g13**2*g23/48 - 1*g12*g13*g23/24 + 13*g12*g23**2/48 - 11*g13*g23**2/48)
+    E_Trotter2 += sx1*sx3 * (13*g12**2*g13/48 - 11*g12**2*g23/48 - 1*g12*g13*g23/24 + 13*g13*g23**2/48 - 11*g12*g23**2/48)
+    E_Trotter2 += sx2*sx3 * (13*g12**2*g23/48 - 11*g12**2*g13/48 - 1*g12*g13*g23/24 + 13*g13**2*g23/48 - 11*g12*g13**2/48)
+    E_Trotter2 += sy1*sy2 * (1*g12*g13**2/12  - 1*g13**2*g23/24  - 1*g12*g13*g23/6  + 1*g12*g23**2/12  - 1*g13*g23**2/24 )
+    E_Trotter2 += sy1*sy3 * (1*g12**2*g13/12  - 1*g12**2*g23/24  - 1*g12*g13*g23/6  + 1*g13*g23**2/12  - 1*g12*g23**2/24 )
+    E_Trotter2 += sy2*sy3 * (1*g13**2*g23/12  - 1*g12**2*g13/24  - 1*g12*g13*g23/6  + 1*g12**2*g23/8   - 1*g12*g13**2/12 ) # different pattern
+    E_Trotter2 += sz1*sz2 * (13*g13**2*g23/48 + 13*g13**2*g23/48 - 1*g12*g13*g23/24 - 11*g12*g13**2/48 - 11*g12*g23**2/48)
+    E_Trotter2 += sz1*sz3 * (13*g12**2*g23/48 + 13*g12*g23**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g13/48 - 11*g13*g23**2/48)
+    E_Trotter2 += sz2*sz3 * (13*g12**2*g13/48 + 13*g12*g13**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g23/48 - 11*g13**2*g23/48)
+
+    def H_Trotter2(t, args):
+        return H_Heisenberg + E_Trotter2*t**2
 
     # master equation solver
     res_ex = qt.mesolve(H_Heisenberg, psi0, tlist, [], [sz1, sz2, sz3])
@@ -79,24 +84,22 @@ def main():
     evl_sz2_T2 = res_T2.expect[1]
     evl_sz3_T2 = res_T2.expect[2]
 
-    inv_prob_1_ex = np.array([abs(evl_sz1_ex[0]-evl_sz1_ex[i])/2 for i in range(0, len(evl_sz1_ex))])
-    inv_prob_2_ex = np.array([abs(evl_sz2_ex[0]-evl_sz2_ex[i])/2 for i in range(0, len(evl_sz2_ex))])
-    inv_prob_3_ex = np.array([abs(evl_sz3_ex[0]-evl_sz3_ex[i])/2 for i in range(0, len(evl_sz3_ex))])
-    inv_prob_1_T1 = np.array([abs(evl_sz1_T1[0]-evl_sz1_T1[i])/2 for i in range(0, len(evl_sz1_T1))])
-    inv_prob_2_T1 = np.array([abs(evl_sz2_T1[0]-evl_sz2_T1[i])/2 for i in range(0, len(evl_sz2_T1))])
-    inv_prob_3_T1 = np.array([abs(evl_sz3_T1[0]-evl_sz3_T1[i])/2 for i in range(0, len(evl_sz3_T1))])
-    inv_prob_1_T2 = np.array([abs(evl_sz1_T2[0]-evl_sz1_T2[i])/2 for i in range(0, len(evl_sz1_T2))])
-    inv_prob_2_T2 = np.array([abs(evl_sz2_T2[0]-evl_sz2_T2[i])/2 for i in range(0, len(evl_sz2_T2))])
-    inv_prob_3_T2 = np.array([abs(evl_sz3_T2[0]-evl_sz3_T2[i])/2 for i in range(0, len(evl_sz3_T2))])
-
-    # Plotting: Z expectation value (using exact model)
+    # Plotting: Z expectation value
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
     
-    ax.plot(tlist, evl_sz1_ex, color="blue" , label=r"$\nu_1$")
-    ax.plot(tlist, evl_sz2_ex, color="green", label=r"$\nu_2$")
-    ax.plot(tlist, evl_sz3_ex, color="red"  , label=r"$\nu_3$")
-    ax.set_title(r"Exact evolution of expectation value \langle Z_i\rangle")
+    ax.plot(tlist, evl_sz1_ex, color="#80bfff", label=r"$\nu_{1,\text{ex}}$", linestyle="-" )
+    ax.plot(tlist, evl_sz2_ex, color="#00ff00", label=r"$\nu_{2,\text{ex}}$", linestyle="-" )
+    ax.plot(tlist, evl_sz3_ex, color="#ff5c33", label=r"$\nu_{3,\text{ex}}$", linestyle="-" )
+    ax.plot(tlist, evl_sz1_T1, color="#0073e6", label=r"$\nu_{1,\text{T1}}$", linestyle="--")
+    ax.plot(tlist, evl_sz2_T1, color="#00b300", label=r"$\nu_{2,\text{T1}}$", linestyle="--")
+    ax.plot(tlist, evl_sz3_T1, color="#ff3300", label=r"$\nu_{3,\text{T1}}$", linestyle="--")
+    ax.plot(tlist, evl_sz1_T2, color="#00264d", label=r"$\nu_{1,\text{T2}}$", linestyle="-.")
+    ax.plot(tlist, evl_sz2_T2, color="#008000", label=r"$\nu_{2,\text{T2}}$", linestyle="-.")
+    ax.plot(tlist, evl_sz3_T2, color="#991f00", label=r"$\nu_{3,\text{T2}}$", linestyle="-.")
+
+
+    ax.set_title(r"Exact evolution of expectation value $\langle Z_i\rangle$")
     ax.set_xlabel("Time")
     ax.set_ylabel(r"Expectation value $\langle Z\rangle$")
     ax.set_xlim(np.min(tlist), np.max(tlist))
@@ -110,18 +113,36 @@ def main():
     fig.savefig(f'..\\plots\\3q_flavor_inv\\Z_exp_vl.pdf', dpi=300)
     plt.close(fig)
 
-    # Plotting: flavor inversion probability (using exact model)
+    # Plotting: flavor inversion probability.
+    # The plots displays, for each qubit, the probability of flavor inversion as a function of time,
+    # as computed by the exact Heisenberg Hamiltonian and the first and second order Trotter Hamiltonians.
+    inv_prob_1_ex = np.array([abs(evl_sz1_ex[0]-evl_sz1_ex[i])/2 for i in range(0, len(evl_sz1_ex))])
+    inv_prob_2_ex = np.array([abs(evl_sz2_ex[0]-evl_sz2_ex[i])/2 for i in range(0, len(evl_sz2_ex))])
+    inv_prob_3_ex = np.array([abs(evl_sz3_ex[0]-evl_sz3_ex[i])/2 for i in range(0, len(evl_sz3_ex))])
+    inv_prob_1_T1 = np.array([abs(evl_sz1_T1[0]-evl_sz1_T1[i])/2 for i in range(0, len(evl_sz1_T1))])
+    inv_prob_2_T1 = np.array([abs(evl_sz2_T1[0]-evl_sz2_T1[i])/2 for i in range(0, len(evl_sz2_T1))])
+    inv_prob_3_T1 = np.array([abs(evl_sz3_T1[0]-evl_sz3_T1[i])/2 for i in range(0, len(evl_sz3_T1))])
+    inv_prob_1_T2 = np.array([abs(evl_sz1_T2[0]-evl_sz1_T2[i])/2 for i in range(0, len(evl_sz1_T2))])
+    inv_prob_2_T2 = np.array([abs(evl_sz2_T2[0]-evl_sz2_T2[i])/2 for i in range(0, len(evl_sz2_T2))])
+    inv_prob_3_T2 = np.array([abs(evl_sz3_T2[0]-evl_sz3_T2[i])/2 for i in range(0, len(evl_sz3_T2))])
+
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
     
-    ax.plot(tlist, inv_prob_1_ex, color="blue" , label=r"$\nu_1$")
-    ax.plot(tlist, inv_prob_2_ex, color="green", label=r"$\nu_2$")
-    ax.plot(tlist, inv_prob_3_ex, color="red"  , label=r"$\nu_3$")
-    ax.set_title(r"Exact evolution of expectation value \langle Z_i\rangle")
+    ax.plot(tlist, inv_prob_1_ex, color="#80bfff", label=r"$\nu_{1,\text{ex}}$", linestyle="-" )
+    ax.plot(tlist, inv_prob_2_ex, color="#00ff00", label=r"$\nu_{2,\text{ex}}$", linestyle="-" )
+    ax.plot(tlist, inv_prob_3_ex, color="#ff5c33", label=r"$\nu_{3,\text{ex}}$", linestyle="-" )
+    ax.plot(tlist, inv_prob_1_T1, color="#0073e6", label=r"$\nu_{1,\text{T1}}$", linestyle="--")
+    ax.plot(tlist, inv_prob_2_T1, color="#00b300", label=r"$\nu_{2,\text{T1}}$", linestyle="--")
+    ax.plot(tlist, inv_prob_3_T1, color="#ff3300", label=r"$\nu_{3,\text{T1}}$", linestyle="--")
+    ax.plot(tlist, inv_prob_1_T2, color="#00264d", label=r"$\nu_{1,\text{T2}}$", linestyle="-.")
+    ax.plot(tlist, inv_prob_2_T2, color="#008000", label=r"$\nu_{2,\text{T2}}$", linestyle="-.")
+    ax.plot(tlist, inv_prob_3_T2, color="#991f00", label=r"$\nu_{3,\text{T2}}$", linestyle="-.")
+    ax.set_title(r"Probability of flavor inversion.")
     ax.set_xlabel("Time")
-    ax.set_ylabel(r"Expectation value $\langle Z\rangle$")
+    ax.set_ylabel(r"$P_\text{inv}(t) = |\langle Z\rangle(0)-\langle Z\rangle(t)|/2$")
     ax.set_xlim(np.min(tlist), np.max(tlist))
-    legend = ax.legend(loc=3, frameon=True, borderaxespad=0.8, fontsize=8)
+    legend = ax.legend(loc=2, frameon=True, borderaxespad=0.8, fontsize=8)
     legend.get_frame().set_facecolor('white')
     legend.get_frame().set_alpha(1.0)
     legend.get_frame().set_boxstyle("Square")

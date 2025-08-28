@@ -63,9 +63,9 @@ def main():
     fig.savefig(f'..\\plots\\3q_evo_Trotter1\\comp_exp_val.pdf', dpi=300)
     plt.close(fig)
 
-    # #2: compute the spectral norm difference ||A(t)||=||e^{-iH_Trotter t}-e^{-iH_Heisenberg t}||
+    # #2: plot the spectral norm difference ||A||(t)=||e^{-iH_Trotter t}-e^{-iH_Heisenberg t}|| for t in tlist
 
-    normA_Trotter1 = [np.sqrt(abs(np.max((((-1j*(H_Heisenberg + E_Trotter1*t)*t).expm() - (-1j*H_Heisenberg*t).expm()).eigenstates()[0])))) for t in tlist]
+    normA_Trotter1 = np.array([np.max(np.linalg.svd(((-1j*(H_Heisenberg + E_Trotter1*t)*t).expm() - (-1j*H_Heisenberg*t).expm()).full(), compute_uv=False)) for t in tlist])
 
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)

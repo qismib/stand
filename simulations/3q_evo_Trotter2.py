@@ -18,7 +18,7 @@ def main():
     g13 = 2e-1
     g23 = 1e-1
 
-    tlist = np.linspace(0, 50, 1000)
+    tlist = np.linspace(0, 10, 1000)
 
     sx1 = qt.tensor(qt.sigmax(), qt.qeye(2), qt.qeye(2))
     sy1 = qt.tensor(qt.sigmay(), qt.qeye(2), qt.qeye(2))
@@ -41,8 +41,8 @@ def main():
     E_Trotter2 += sy1*sy3 * (1*g12**2*g13/12  - 1*g12**2*g23/24  - 1*g12*g13*g23/6  + 1*g13*g23**2/12  - 1*g12*g23**2/24 )
     E_Trotter2 += sy2*sy3 * (1*g13**2*g23/12  - 1*g12**2*g13/24  - 1*g12*g13*g23/6  + 1*g12**2*g23/8   - 1*g12*g13**2/12 ) # different pattern
     E_Trotter2 += sz1*sz2 * (13*g13**2*g23/48 + 13*g13**2*g23/48 - 1*g12*g13*g23/24 - 11*g12*g13**2/48 - 11*g12*g23**2/48)
-    E_Trotter2 += sz1*sz3 * (13*g12**2*g13/48 + 13*g12*g13**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g23/48 - 11*g13**2*g23/48)
-
+    E_Trotter2 += sz1*sz3 * (13*g12**2*g23/48 + 13*g12*g23**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g13/48 - 11*g13*g23**2/48)
+    E_Trotter2 += sz2*sz3 * (13*g12**2*g13/48 + 13*g12*g13**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g23/48 - 11*g13**2*g23/48)
 
     H_Heisenberg = g12*(sx1*sx2 + sy1*sy2 + sz1*sz2) + g13*(sx1*sx3 + sy1*sy3 + sz1*sz3) + g23*(sx2*sx3 + sy2*sy3 + sz2*sz3)
 
@@ -71,13 +71,13 @@ def main():
 
     # #2: compute the spectral norm difference ||A(t)||=||e^{-iH_Trotter t}-e^{-iH_Heisenberg t}||
 
-    normA_Trotter1 = [np.sqrt(abs(np.max((((-1j*(H_Heisenberg + E_Trotter2*t)*t).expm() - (-1j*H_Heisenberg*t).expm()).eigenstates()[0])))) for t in tlist]
+    normA_Trotter2 = np.array([np.max(np.linalg.svd(((-1j*(H_Heisenberg + E_Trotter2*t*t)*t).expm() - (-1j*H_Heisenberg*t).expm()).full(), compute_uv=False)) for t in tlist])
 
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
 
-    ax.plot(tlist, normA_Trotter1, color="blue")
-    ax.set_title(r"Evolution of first order additive Trotter error.")
+    ax.plot(tlist, normA_Trotter2, color="blue")
+    ax.set_title(r"Evolution of second order additive Trotter error.")
     ax.set_xlabel("Time")
     ax.set_ylabel(r"$\|e^{-iH_{\text{Trotter }2}t} - e^{-iH_\text{Heisenberg}t}\|$")
     ax.set_xlim(np.min(tlist), np.max(tlist))
@@ -97,8 +97,8 @@ def main():
 
     for i, t in enumerate(tlist):
         U_Heis = (-1j*H_Heisenberg*t).expm()
-        U_Tr1  = (-1j*(H_Heisenberg + E_Trotter2*t)*t).expm()
-        fidelity_val[i] = abs((U_Tr1*psi0).dag() * (U_Heis*psi0))
+        U_Tr2  = (-1j*(H_Heisenberg + E_Trotter2*t**2)*t).expm()
+        fidelity_val[i] = abs((U_Tr2*psi0).dag() * (U_Heis*psi0))
 
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)

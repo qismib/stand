@@ -17,9 +17,9 @@ matplotlib.use('Agg')
 
 def main():
     # Parameters
-    J = 1e-1 # interaction strength between qubit 1 and qubit 2
+    J = -1e-1 # interaction strength between qubit 1 and qubit 2
     max_phase_angle = 3*np.pi / 2
-    tau_max = max_phase_angle / 2 / J
+    tau_max = max_phase_angle / 2 / abs(J)
 
     tlist = np.linspace(0, tau_max, 500)
 
@@ -40,7 +40,7 @@ def main():
 
     res = qt.mesolve(H_XY, psi0, tlist, [], [sx1, sy1, sz1, sx2, sy2, sz2])
     ex1, ey1, ez1, ex2, ey2, ez2 = res.expect
-
+ 
     # Plotting
     fig, ax = plt.subplots(1, 3)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
