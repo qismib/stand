@@ -1,6 +1,8 @@
 # ---------------------------- 3q_flavor_inv.py ----------------------------
 #---------------------------------------------------------------------------
-# Reproduce plots from https://arxiv.org/pdf/2207.03189 figure 2 for N=3.
+# Reproduce plots from https://arxiv.org/pdf/2207.03189 figure 5 for N=3.
+# Study the inversion probability after a single Trotter step for different 
+# values of the time steps dt.
 
 import numpy as np
 import qutip as qt
@@ -8,9 +10,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 from scipy.constants import c, elementary_charge
-
-
-
 
 
 def main():
@@ -26,7 +25,7 @@ def main():
     g13 = 1e-1
     g23 = 1e-2
 
-    tlist = np.linspace(0, 20, 10000)
+    dt_list = np.arange(1, 200 , 1)*0.1
 
     # one-qubit operators
     sx1 = qt.tensor(qt.sigmax(), qt.qeye(2), qt.qeye(2))
@@ -69,9 +68,9 @@ def main():
         return H_Heisenberg + E_Trotter2*t**2
 
     # master equation solver
-    res_ex = qt.mesolve(H_Heisenberg, psi0, tlist, [], [sz1, sz2, sz3])
-    res_T1 = qt.mesolve(H_Trotter1, psi0, tlist, [], [sz1, sz2, sz3])
-    res_T2 = qt.mesolve(H_Trotter2, psi0, tlist, [], [sz1, sz2, sz3])
+    res_ex = qt.mesolve(H_Heisenberg, psi0, dt_list, [], [sz1, sz2, sz3])
+    res_T1 = qt.mesolve(H_Trotter1  , psi0, dt_list, [], [sz1, sz2, sz3])
+    res_T2 = qt.mesolve(H_Trotter2  , psi0, dt_list, [], [sz1, sz2, sz3])
 
     # expectation values
     evl_sz1_ex = res_ex.expect[0]
@@ -84,38 +83,10 @@ def main():
     evl_sz2_T2 = res_T2.expect[1]
     evl_sz3_T2 = res_T2.expect[2]
 
-    # Plotting: Z expectation value
-    fig, ax = plt.subplots(1, 1)
-    fig.set_size_inches(16 / 2.54, 10 / 2.54)
-    
-    ax.plot(tlist, evl_sz1_ex, color="#80bfff", label=r"$\nu_{1,\text{ex}}$", linestyle="-" )
-    ax.plot(tlist, evl_sz2_ex, color="#00ff00", label=r"$\nu_{2,\text{ex}}$", linestyle="-" )
-    ax.plot(tlist, evl_sz3_ex, color="#ff5c33", label=r"$\nu_{3,\text{ex}}$", linestyle="-" )
-    ax.plot(tlist, evl_sz1_T1, color="#0073e6", label=r"$\nu_{1,\text{T1}}$", linestyle="--")
-    ax.plot(tlist, evl_sz2_T1, color="#00b300", label=r"$\nu_{2,\text{T1}}$", linestyle="--")
-    ax.plot(tlist, evl_sz3_T1, color="#ff3300", label=r"$\nu_{3,\text{T1}}$", linestyle="--")
-    ax.plot(tlist, evl_sz1_T2, color="#00264d", label=r"$\nu_{1,\text{T2}}$", linestyle="-.")
-    ax.plot(tlist, evl_sz2_T2, color="#008000", label=r"$\nu_{2,\text{T2}}$", linestyle="-.")
-    ax.plot(tlist, evl_sz3_T2, color="#991f00", label=r"$\nu_{3,\text{T2}}$", linestyle="-.")
-
-
-    ax.set_title(r"Exact evolution of expectation value $\langle Z_i\rangle$")
-    ax.set_xlabel("Time")
-    ax.set_ylabel(r"Expectation value $\langle Z\rangle$")
-    ax.set_xlim(np.min(tlist), np.max(tlist))
-    legend = ax.legend(loc=3, frameon=True, borderaxespad=0.8, fontsize=8)
-    legend.get_frame().set_facecolor('white')
-    legend.get_frame().set_alpha(1.0)
-    legend.get_frame().set_boxstyle("Square")
-
-    plt.grid()
-    plt.tight_layout()
-    fig.savefig(f'..\\plots\\3q_flavor_inv\\Z_exp_vl.pdf', dpi=300)
-    plt.close(fig)
-
-    # Plotting: flavor inversion probability as a function of time.
-    # The plots displays, for each qubit, the probability of flavor inversion as a function of time,
-    # as computed by the exact Heisenberg Hamiltonian and the first and second order Trotter Hamiltonians.
+    # Plotting: flavor inversion probability as a function of the Trotter time step.
+    # The plots displays, for each qubit, the probability of flavor inversion as a function of the 
+    # Trotter time step, as computed by the exact Heisenberg Hamiltonian and the first and 
+    # second order Trotter Hamiltonians.
     inv_prob_1_ex = np.array([abs(evl_sz1_ex[0]-evl_sz1_ex[i])/2 for i in range(0, len(evl_sz1_ex))])
     inv_prob_2_ex = np.array([abs(evl_sz2_ex[0]-evl_sz2_ex[i])/2 for i in range(0, len(evl_sz2_ex))])
     inv_prob_3_ex = np.array([abs(evl_sz3_ex[0]-evl_sz3_ex[i])/2 for i in range(0, len(evl_sz3_ex))])
@@ -129,19 +100,19 @@ def main():
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
     
-    ax.plot(tlist, inv_prob_1_ex, color="#80bfff", label=r"$\nu_{1,\text{ex}}$", linestyle="-" )
-    ax.plot(tlist, inv_prob_2_ex, color="#00ff00", label=r"$\nu_{2,\text{ex}}$", linestyle="-" )
-    ax.plot(tlist, inv_prob_3_ex, color="#ff5c33", label=r"$\nu_{3,\text{ex}}$", linestyle="-" )
-    ax.plot(tlist, inv_prob_1_T1, color="#0073e6", label=r"$\nu_{1,\text{T1}}$", linestyle="--")
-    ax.plot(tlist, inv_prob_2_T1, color="#00b300", label=r"$\nu_{2,\text{T1}}$", linestyle="--")
-    ax.plot(tlist, inv_prob_3_T1, color="#ff3300", label=r"$\nu_{3,\text{T1}}$", linestyle="--")
-    ax.plot(tlist, inv_prob_1_T2, color="#00264d", label=r"$\nu_{1,\text{T2}}$", linestyle="-.")
-    ax.plot(tlist, inv_prob_2_T2, color="#008000", label=r"$\nu_{2,\text{T2}}$", linestyle="-.")
-    ax.plot(tlist, inv_prob_3_T2, color="#991f00", label=r"$\nu_{3,\text{T2}}$", linestyle="-.")
+    ax.plot(dt_list, inv_prob_1_ex, color="#80bfff", label=r"$\nu_{1,\text{ex}}$", linestyle="-" )
+    ax.plot(dt_list, inv_prob_2_ex, color="#00ff00", label=r"$\nu_{2,\text{ex}}$", linestyle="-" )
+    ax.plot(dt_list, inv_prob_3_ex, color="#ff5c33", label=r"$\nu_{3,\text{ex}}$", linestyle="-" )
+    ax.plot(dt_list, inv_prob_1_T1, color="#0073e6", label=r"$\nu_{1,\text{T1}}$", linestyle="--")
+    ax.plot(dt_list, inv_prob_2_T1, color="#00b300", label=r"$\nu_{2,\text{T1}}$", linestyle="--")
+    ax.plot(dt_list, inv_prob_3_T1, color="#ff3300", label=r"$\nu_{3,\text{T1}}$", linestyle="--")
+    ax.plot(dt_list, inv_prob_1_T2, color="#00264d", label=r"$\nu_{1,\text{T2}}$", linestyle="-.")
+    ax.plot(dt_list, inv_prob_2_T2, color="#008000", label=r"$\nu_{2,\text{T2}}$", linestyle="-.")
+    ax.plot(dt_list, inv_prob_3_T2, color="#991f00", label=r"$\nu_{3,\text{T2}}$", linestyle="-.")
     ax.set_title(r"Probability of flavor inversion.")
     ax.set_xlabel("Time")
     ax.set_ylabel(r"$P_\text{inv}(t) = |\langle Z\rangle(0)-\langle Z\rangle(t)|/2$")
-    ax.set_xlim(np.min(tlist), np.max(tlist))
+    ax.set_xlim(np.min(dt_list), np.max(dt_list))
     legend = ax.legend(loc=2, frameon=True, borderaxespad=0.8, fontsize=8)
     legend.get_frame().set_facecolor('white')
     legend.get_frame().set_alpha(1.0)
@@ -149,7 +120,7 @@ def main():
 
     plt.grid()
     plt.tight_layout()
-    fig.savefig(f'..\\plots\\3q_flavor_inv\\track_flavor_inversion.pdf', dpi=300)
+    fig.savefig(f'..\\plots\\3q_ion_singlestep\\flavor_inversion_dt.pdf', dpi=300)
     plt.close(fig)
     
 

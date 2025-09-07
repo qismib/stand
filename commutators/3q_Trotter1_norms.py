@@ -54,17 +54,7 @@ def main():
     sum8 = sum_with_sign(list8)
     sum9 = sum_with_sign(list9)
 
-    # eig1, _ = (sum1.dag()*sum1).eigenstates()
-    # eig2, _ = (sum2.dag()*sum2).eigenstates()
-    # eig3, _ = (sum3.dag()*sum3).eigenstates()
-    # eig4, _ = (sum4.dag()*sum4).eigenstates()
-    # eig5, _ = (sum5.dag()*sum5).eigenstates()
-    # eig6, _ = (sum6.dag()*sum6).eigenstates()
-    # eig7, _ = (sum7.dag()*sum7).eigenstates()
-    # eig8, _ = (sum8.dag()*sum8).eigenstates()
-    # eig9, _ = (sum9.dag()*sum9).eigenstates()
-
-    # spectral norm: ||A||_spectral = sqrt[lambda_max(A^dag A)]
+    # spectral norm: ||A||_spectral = sqrt[lambda_max(A^dag A)] TODO fix as in 3q_Trotter_compare.py
     print("||sum1||:", np.sqrt(np.max((sum1.dag()*sum1).eigenstates()[0]))) # g12g13
     print("||sum2||:", np.sqrt(np.max((sum2.dag()*sum2).eigenstates()[0]))) # g12g23
     print("||sum3||:", np.sqrt(np.max((sum3.dag()*sum3).eigenstates()[0]))) # g13g23
@@ -74,6 +64,7 @@ def main():
     print("||sum7||:", np.sqrt(np.max((sum7.dag()*sum7).eigenstates()[0]))) # g12g13
     print("||sum8||:", np.sqrt(np.max((sum8.dag()*sum8).eigenstates()[0]))) # g12g23
     print("||sum9||:", np.sqrt(np.max((sum9.dag()*sum9).eigenstates()[0]))) # g13g23
+
 
 
 

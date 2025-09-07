@@ -168,6 +168,8 @@ class PauliCommutators():
                 grouped[key] = coeff
 
         return [(coeff, key[0], key[1]) for key, coeff in grouped.items() if coeff != 0]
+    
+
 
     
 
