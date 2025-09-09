@@ -1,4 +1,4 @@
-# ---------------------------- num_terms_comm_scaling.py ----------------------------
+# ---------------------------- commutators_to_latex.py ------------------------------
 #------------------------------------------------------------------------------------
 # Providing bounds for the additive Trotter error requires computing spectral norms
 # of commutators of complicated Hamiltonian operators. 
@@ -6,11 +6,8 @@
 # H_{XY}^N, H_{XZ}^N, H_{YZ}^N operators (see Section 5). 
 # I'm interested in providing bounds for the scaling of the additive Trotter
 # error as a function of the qubit number N. 
-# Providing analytical bounds is challenging, so the aim of this script is 
-# to perform a fit for the scaling by computing numerically the number of terms
-# involved in the commutators for varying N. In order to provide the strictest 
-# bound in each case I perform the computation with the same logic of the first
-# calculation in Section 4.1.1.
+# This scripts computes the commutators and formats the result into a (almost) LaTeX
+# compatible string.
 
 # I aim to do N = 3,4,5,6 simulations for the first order Trotter error.
 # Note: N=2 additive Trotter error is zero.
@@ -24,6 +21,7 @@ matplotlib.use('Agg')
 import sys; sys.path.append("../classes")
 from CommutatorTool import PauliCommutators
 
+# ---------- gen_Heisenberg_terms(N) ----------
 
 def gen_Heisenberg_terms(N):
         """
@@ -45,10 +43,6 @@ def gen_Heisenberg_terms(N):
                 yy_term = ["Y" if k == i or k == j else "I" for k in range(N)]
                 zz_term = ["Z" if k == i or k == j else "I" for k in range(N)]
 
-                xx_str = "".join(xx_term)
-                yy_str = "".join(yy_term)
-                zz_str = "".join(zz_term)
-
                 XY.append((0.5, gate_id, "".join(xx_term)))
                 XY.append((0.5, gate_id, "".join(yy_term)))
 
@@ -60,42 +54,14 @@ def gen_Heisenberg_terms(N):
 
         return XY, XZ, YZ
 
-def str_to_latex_frac(s):
-    is_complex = False
-    s = str(s)
-
-    if 'j' in s: 
-        s = s.strip('j')
-        is_complex = True
-
-    if "." not in s: return f"{s}/1"
-    
-    int_part, dec_part = s.split(".")
-    numerator = int(int_part + dec_part)
-    denominator = 10 ** len(dec_part)
-
-    g = math.gcd(numerator, denominator)
-    numerator //= g
-    denominator //= g    
-
-    if is_complex:
-        temp = f"\\frac{{{numerator}}}{{{denominator}}}i"
-        if "-" in temp:
-            return temp
-        else:
-            return f"\\frac{{+{numerator}}}{{{denominator}}}i"
-    else:
-        temp = f"\\frac{{{numerator}}}{{{denominator}}}"
-        if "-" in temp:
-            return temp
-        else:
-            return f"\\frac{{+{numerator}}}{{{denominator}}}"
-
+# ---------- dict_to_latex(terms, title) ----------
 
 def dict_to_latex(terms, title):
     """
     terms(dict): {"XYZ": [[-0.5j, "(g12)(g23)"], ...], ...}
     """
+
+    # auxiliary functions
     def clean_coeff(coeff_str):
         split_str = coeff_str.split(")(")
         split_str = [p.strip(')').strip('(').strip('g') for p in split_str]
@@ -113,7 +79,40 @@ def dict_to_latex(terms, title):
             if op != 'I': substr += f"{op}_{i+1}"
 
         return f"{substr}+"
+    
+    def str_to_latex_frac(s):
+        is_complex = False
+        s = str(s)
 
+        if 'j' in s: 
+            s = s.strip('j')
+            is_complex = True
+
+        if "." not in s: return f"{s}/1"
+
+        int_part, dec_part = s.split(".")
+        numerator = int(int_part + dec_part)
+        denominator = 10 ** len(dec_part)
+
+        g = math.gcd(numerator, denominator)
+        numerator //= g
+        denominator //= g  
+
+        if is_complex:
+            temp = f"\\frac{{{numerator}}}{{{denominator}}}i"
+            if "-" in temp:
+                return temp
+            else:
+                return f"\\frac{{+{numerator}}}{{{denominator}}}i"
+        else:
+            temp = f"\\frac{{{numerator}}}{{{denominator}}}"
+            if "-" in temp:
+                return temp
+            else:
+                return f"\\frac{{+{numerator}}}{{{denominator}}}"
+            
+    # -------------------------------------------------------------------------------------------
+    # actual function
     latex_str = f"{title}="
     for key, value in terms.items():
         temp = "\\left|"
@@ -134,10 +133,12 @@ def dict_to_latex(terms, title):
 
     return latex_str
 
+# ---------- group_by_pauli_string(comm) ----------
+
 def group_by_pauli_string(comm):
 
     def is_coeff_equal(str1, str2):
-        pair1 = str1.split(")(")
+        pair1 = str1.split(")(")        
         pair2 = str2.split(")(")
         pair1 = [p.strip('(').strip(')').strip('g') for p in pair1]
         pair2 = [p.strip('(').strip(')').strip('g') for p in pair2]
@@ -204,6 +205,7 @@ def main():
     terms_A6C6 = group_by_pauli_string(A6C6)
     terms_B6C6 = group_by_pauli_string(B6C6)
 
+
     latex_A3B3 = dict_to_latex(terms_A3B3, "[A_3,B_3]")
     latex_A3C3 = dict_to_latex(terms_A3C3, "[A_3,C_3]")
     latex_B3C3 = dict_to_latex(terms_B3C3, "[B_3,C_3]")
@@ -216,18 +218,8 @@ def main():
     latex_A6B6 = dict_to_latex(terms_A6B6, "[A_6,B_6]")
     latex_A6C6 = dict_to_latex(terms_A6C6, "[A_6,C_6]")
     latex_B6C6 = dict_to_latex(terms_B6C6, "[B_6,C_6]")
-
-    print(latex_A6B6)
-
-
         
-        
-
-
-    
-
-
-
+    print(latex_A3B3)
     
 
 

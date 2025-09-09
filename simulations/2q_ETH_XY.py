@@ -89,7 +89,6 @@ def main():
     secnd.set_yticklabels(y_ticks_labels, rotation='horizontal', fontsize=2)
     third.set_yticklabels(y_ticks_labels, rotation='horizontal', fontsize=2)
 
-
     legend = first.legend(loc=3, frameon=True, borderaxespad=0.8, fontsize=8)
     legend.get_frame().set_facecolor('white')
     legend.get_frame().set_alpha(1.0)
