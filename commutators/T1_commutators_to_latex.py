@@ -1,5 +1,5 @@
-# ---------------------------- commutators_to_latex.py ------------------------------
-#------------------------------------------------------------------------------------
+# ---------------------------- T1_commutators_to_latex.py ------------------------------
+#---------------------------------------------------------------------------------------
 # Providing bounds for the additive Trotter error requires computing spectral norms
 # of commutators of complicated Hamiltonian operators. 
 # In the digital-analog setup I consider, the Hamiltonian is made up of 
@@ -83,6 +83,7 @@ def dict_to_latex(terms, title):
     def str_to_latex_frac(s):
         is_complex = False
         s = str(s)
+        print(s)
 
         if 'j' in s: 
             s = s.strip('j')

@@ -1,6 +1,6 @@
 # ---------------------------- add_err_N_scaling.py ---------------------------------
 #------------------------------------------------------------------------------------
-# (builds up on commutators_to_latex.py)
+# (builds up on T1_commutators_to_latex.py)
 # Providing bounds for the additive Trotter error requires computing spectral norms
 # of commutators of complicated Hamiltonian operators. 
 # In the digital-analog setup I consider, the Hamiltonian is made up of 
@@ -179,7 +179,6 @@ def main():
     ctl7 = PauliCommutators(N=7)
     ctl8 = PauliCommutators(N=8)
 
-
     A3, B3, C3 = gen_Heisenberg_terms(3)
     A4, B4, C4 = gen_Heisenberg_terms(4)
     A5, B5, C5 = gen_Heisenberg_terms(5)
@@ -187,7 +186,7 @@ def main():
     A7, B7, C7 = gen_Heisenberg_terms(7)
     A8, B8, C8 = gen_Heisenberg_terms(8)
 
-
+    # ----------------------------------------------------------------------------------------------------------
     # first order commutators
     A3B3 = ctl3.comm_lincombo(A3, B3)
     A3C3 = ctl3.comm_lincombo(A3, C3)
@@ -227,6 +226,10 @@ def main():
     terms_A8C8 = group_by_pauli_string(A8C8)
     terms_B8C8 = group_by_pauli_string(B8C8)
 
+    # ----------------------------------------------------------------------------------------------------------
+    # compute contributions to the upper bound for the first order Trotter error according to Propostion 9
+    # in https://journals.aps.org/prx/pdf/10.1103/PhysRevX.11.011020 or equation (5.3) of Overleaf file 
+
     dt_list = np.arange(1,10) * 0.1
 
     err_vls = []
@@ -240,6 +243,9 @@ def main():
         vls.append(compute_fixed_t_commsum([terms_A8B8, terms_A8C8, terms_B8C8], couplings, dt, 8)) 
         err_vls.append(vls)
 
+    # ----------------------------------------------------------------------------------------------------------
+    # fit of first order error data points with a line (in log-log scale)  
+
     N_vls = np.array([3, 4, 5, 6, 7, 8])
     log_N_vls = np.log(N_vls)
     log_err_vls = [np.log(vls) for vls in err_vls]
@@ -252,6 +258,8 @@ def main():
         m_obj.hesse()
         m_objects.append(m_obj)
 
+    # ----------------------------------------------------------------------------------------------------------
+    # plot bound for the first order Trotter error as a function of N for various dt
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
 
@@ -280,10 +288,89 @@ def main():
 
     plt.grid()
     plt.tight_layout()
-    fig.savefig(f'..\\plots\\add_err_N_scaling\\first_order_scalings.pdf', dpi=300)
+    fig.savefig(f'..\\plots\\T1_add_err_N_scaling\\first_order_N_scaling.pdf', dpi=300)
     plt.close(fig)
 
+    # ----------------------------------------------------------------------------------------------------------
+    # bound for the first order Trotter error as a function of dt for various N's
+    dt_list = np.arange(1,20) * 0.1
 
+    fig, ax = plt.subplots(1, 1)
+    fig.set_size_inches(16 / 2.54, 10 / 2.54)
+
+    err_vls = []
+    err_vls.append([compute_fixed_t_commsum([terms_A3B3, terms_A3C3, terms_B3C3], couplings, dt, 3) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum([terms_A4B4, terms_A4C4, terms_B4C4], couplings, dt, 4) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum([terms_A5B5, terms_A5C5, terms_B5C5], couplings, dt, 5) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum([terms_A6B6, terms_A6C6, terms_B6C6], couplings, dt, 6) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum([terms_A7B7, terms_A7C7, terms_B7C7], couplings, dt, 7) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum([terms_A8B8, terms_A8C8, terms_B8C8], couplings, dt, 8) for dt in dt_list])
+
+    for i, vls in enumerate(err_vls):
+        ax.scatter(dt_list, vls, color=colors[i], marker='o', label=rf"$N={i+3}$")
+
+    ax.set_title (r"Comparison of first order Trotter error in terms of $dt$.")
+    ax.set_xlabel(r"$dt$")
+    ax.set_ylabel(r"$\varepsilon_1(dt)$")
+
+    legend = ax.legend(loc=2, frameon=True, borderaxespad=0.8, fontsize=6)
+    legend.get_frame().set_facecolor('white')
+    legend.get_frame().set_alpha(1.0)
+    legend.get_frame().set_boxstyle("Square")
+
+    plt.grid()
+    plt.tight_layout()
+    fig.savefig(f'..\\plots\\T1_add_err_N_scaling\\first_order_dt_scaling.pdf', dpi=300)
+    plt.close(fig)
+
+    # ----------------------------------------------------------------------------------------------------------
+    # simulate first order evolution for the N=3 system and compare with the numerically computed bound
+    dt_list = np.arange(1,20) * 0.1
+
+    sx1 = qt.tensor(qt.sigmax(), qt.qeye(2), qt.qeye(2))
+    sy1 = qt.tensor(qt.sigmay(), qt.qeye(2), qt.qeye(2))
+    sz1 = qt.tensor(qt.sigmaz(), qt.qeye(2), qt.qeye(2))
+
+    sx2 = qt.tensor(qt.qeye(2), qt.sigmax(), qt.qeye(2))
+    sy2 = qt.tensor(qt.qeye(2), qt.sigmay(), qt.qeye(2))
+    sz2 = qt.tensor(qt.qeye(2), qt.sigmaz(), qt.qeye(2))
+
+    sx3 = qt.tensor(qt.qeye(2), qt.qeye(2), qt.sigmax())
+    sy3 = qt.tensor(qt.qeye(2), qt.qeye(2), qt.sigmay())
+    sz3 = qt.tensor(qt.qeye(2), qt.qeye(2), qt.sigmaz())
+
+    g12 = couplings["g12"]
+    g13 = couplings["g13"]
+    g23 = couplings["g23"]
+
+    H_Heisenberg = g12*(sx1*sx2 + sy1*sy2 + sz1*sz2) + g13*(sx1*sx3 + sy1*sy3 + sz1*sz3) + g23*(sx2*sx3 + sy2*sy3 + sz2*sz3)
+
+    E_Trotter1  = 0.25 * (sx1*sz2*sy3 + sz1*sx2*sy3) * (g12*g13+g12*g23-3*g13*g23)
+    E_Trotter1 += 0.25 * (sx1*sy2*sz3 + sz1*sy2*sz3) * (g12*g13+g13*g23-3*g12*g23)
+    E_Trotter1 += 0.25 * (sy1*sx2*sz3 + sy1*sz2*sx3) * (g12*g23+g13*g23-3*g12*g13)
+
+    normA_Trotter1 = np.array([np.max(np.linalg.svd(((-1j*(H_Heisenberg + E_Trotter1*t)*t).expm() - (-1j*H_Heisenberg*t).expm()).full(), compute_uv=False)) for t in dt_list])
+    errvls3 = [compute_fixed_t_commsum([terms_A3B3, terms_A3C3, terms_B3C3], couplings, dt, 3) for dt in dt_list]
+
+    fig, ax = plt.subplots(1, 1)
+    fig.set_size_inches(16 / 2.54, 10 / 2.54)
+
+    ax.scatter(dt_list, errvls3, color="#0026FF", marker='o', label=rf"Numerical bound")
+    ax.scatter(dt_list, normA_Trotter1, color="#F700FF", marker='o', label=rf"Simulation")
+
+    ax.set_title (r"Compare simulation and numerical bounds for first order Trotter error for N=3.")
+    ax.set_xlabel(r"$dt$")
+    ax.set_ylabel(r"$\varepsilon_1(dt)$")
+
+    legend = ax.legend(loc=2, frameon=True, borderaxespad=0.8, fontsize=6)
+    legend.get_frame().set_facecolor('white')
+    legend.get_frame().set_alpha(1.0)
+    legend.get_frame().set_boxstyle("Square")
+
+    plt.grid()
+    plt.tight_layout()
+    fig.savefig(f'..\\plots\\T1_add_err_N_scaling\\N3_scalings.pdf', dpi=300)
+    plt.close(fig)
 
 if __name__ == "__main__":
     main()
