@@ -1,6 +1,6 @@
-# ---------------------------- T1_add_err_N_scaling.py ------------------------------
+# ---------------------------- T2_add_err_N_scaling.py ------------------------------
 #------------------------------------------------------------------------------------
-# (builds up on T1_commutators_to_latex.py)
+# (builds up on T2_commutators_to_latex.py)
 # Providing bounds for the additive Trotter error requires computing spectral norms
 # of commutators of complicated Hamiltonian operators. 
 # In the digital-analog setup I consider, the Hamiltonian is made up of 
@@ -13,7 +13,7 @@
 # bound in each case I perform the computation with the same logic of the first
 # calculation in Section 4.1.1.
 
-# I aim to do N = 3,4,5,6 simulations for the first order Trotter error.
+# I aim to do N = 3,4,5,6 simulations for the second order Trotter error.
 # Note: N=2 additive Trotter error is zero.
 
 import numpy as np
@@ -50,6 +50,7 @@ def create_coupling_dict(N, uniform=True):
     else:
         # TODO: implement narrow cone of forward peaked neutrinos distributions (see https://arxiv.org/pdf/2207.03189)
         raise Exception("Can only generate uniform distribution of couplings.")
+
     return dic
 
 
@@ -88,10 +89,10 @@ def gen_Heisenberg_terms(N):
 
 # ---------- group_by_pauli_string(comm) ----------
 
-def group_by_pauli_string(comm): # TODO substitute with general version of T2 scripts
+def group_by_pauli_string(comm, N):
 
     def is_coeff_equal(str1, str2):
-        pair1 = str1.split(")(")
+        pair1 = str1.split(")(")        
         pair2 = str2.split(")(")
         pair1 = [p.strip('(').strip(')').strip('g') for p in pair1]
         pair2 = [p.strip('(').strip(')').strip('g') for p in pair2]
@@ -100,7 +101,7 @@ def group_by_pauli_string(comm): # TODO substitute with general version of T2 sc
         
     list_terms = {}
     for term in comm:
-        if term[2] != "000":
+        if term[2] != "0"*N:
             if term[2] not in list_terms:
                 list_terms[term[2]] = [[term[0], term[1]]]
             else:
@@ -116,19 +117,27 @@ def group_by_pauli_string(comm): # TODO substitute with general version of T2 sc
 
 # ---------- compute_fixed_t_commsum(terms, t, N) ----------
 
-def compute_fixed_t_commsum(terms, couplings, t, N): # TODO differentiate between T1 and T2 version 
+def compute_fixed_t_commsum_T2(onetwo, twofour, couplings, t, N):
     """
-    terms (list of dicts): [{"XYZ": [[-0.5j, "(g12)(g23)"], ...], ...}, {"XYZ": [[0.5j, "(g12)(g13)"], ...], ...}]
+    onetwo  (list of dicts): [{"XYZ": [[-0.5j, "(g12)(g23)"], ...], ...}, {"XYZ": [[0.5j, "(g12)(g13)"], ...], ...}]; these are the terms that contribute with 1/12 coeff
+    twofour (list of dicts): [{"XYZ": [[-0.5j, "(g12)(g23)"], ...], ...}, {"XYZ": [[0.5j, "(g12)(g13)"], ...], ...}]; these are the terms that contribute with 1/24 coeff
     couplings (dict): {"g12": 0.1, "g13": 0.2, ...}
     t (float): time length of simulation
     order (int): order of Trotter formula
 
-    return: value of first order Trotter error for a given set of couplings and time  
+    Implements second order Trotter formula for the Trotter error.
+
+    return: value of first order Trotter error for a given set of couplings and time.  
     """
+    def format_couplings(s):
+        coupl = s.replace('(', '').replace(')','')
+        coupl = coupl.split('g')
+        coupl = ['g'+pair for pair in coupl if pair != '']
+        return coupl
+
 
     def eval_couplings(coeff_str, coupl_dict):
-        split_str = coeff_str.split(")(")
-        split_str = [p.strip(')').strip('(') for p in split_str]
+        split_str = format_couplings(coeff_str)
 
         prod = 1
         for term in split_str:
@@ -136,28 +145,44 @@ def compute_fixed_t_commsum(terms, couplings, t, N): # TODO differentiate betwee
             
         return prod
     
-    # err_vl = sum (g coeff)||Pauli string||(=1) * t^2/2
+    # err_vl = 1/12 * sum (g coeff)||Pauli string||(=1) * dt^3 + 1/24 * sum (g coeff)||Pauli string||(=1) * dt^3 (TODO check)
     err_vl = 0
 
-    for comm_dict in terms:
+    err_12 = 0
+    for comm_dict in onetwo:
         for _, terms in comm_dict.items():
             coeff = 0
             for term in terms:
-                if term[1] != '': coeff += float(str(term[0]).strip('j')) * eval_couplings(term[1], couplings)
+                if term[1] != '': coeff += term[0].real * eval_couplings(term[1], couplings)
+            err_12 += abs(coeff)
 
-            err_vl += abs(coeff)
+    err_vl += err_12 * t**3 / 12
 
-    err_vl = 0.5 * err_vl * t ** 2
+    err_24 = 0
+    for comm_dict in twofour:
+        for _, terms in comm_dict.items():
+            coeff = 0
+            for term in terms:
+                if term[1] != '': coeff += term[0].real * eval_couplings(term[1], couplings)
+            err_24 += abs(coeff)
+
+    err_vl += err_24 * t**3 / 24
 
     return err_vl
 
-# ---------- color_gradient(start, end ,n)  ---------- 
+# ---------- color_gradient(start, end, n)  ---------- 
 
 def color_gradient(start, end, n):
-    """Generate n hex colors from start to end."""
+    """
+    start (hex str): starting color value
+    end   (hex str): ending color value
+    n (int): steps
+
+    Generate n hex colors from start to end.
+    """
     start_rgb = np.array(mcolors.to_rgb(start))
     end_rgb = np.array(mcolors.to_rgb(end))
-    return [ mcolors.to_hex(start_rgb + (end_rgb - start_rgb) * i/(n-1)) for i in range(n) ]
+    return [mcolors.to_hex(start_rgb + (end_rgb - start_rgb) * i/(n-1)) for i in range(n)]
 
 
 # ---------- MAIN ----------
@@ -172,77 +197,158 @@ def main():
     ctl4 = PauliCommutators(N=4)
     ctl5 = PauliCommutators(N=5)
     ctl6 = PauliCommutators(N=6)
-    ctl7 = PauliCommutators(N=7)
-    ctl8 = PauliCommutators(N=8)
 
     A3, B3, C3 = gen_Heisenberg_terms(3)
     A4, B4, C4 = gen_Heisenberg_terms(4)
     A5, B5, C5 = gen_Heisenberg_terms(5)
     A6, B6, C6 = gen_Heisenberg_terms(6)
-    A7, B7, C7 = gen_Heisenberg_terms(7)
-    A8, B8, C8 = gen_Heisenberg_terms(8)
 
     # ----------------------------------------------------------------------------------------------------------
-    # first order commutators
+        # first order commutators
+    # NOTE: could do without redefining since - sign difference does not affect the result
+    #       (absolute value is taken at the end)
     A3B3 = ctl3.comm_lincombo(A3, B3)
     A3C3 = ctl3.comm_lincombo(A3, C3)
     B3C3 = ctl3.comm_lincombo(B3, C3)
+    B3A3 = ctl3.comm_lincombo(B3, A3)
+    C3A3 = ctl3.comm_lincombo(C3, A3)
+    C3B3 = ctl3.comm_lincombo(C3, B3)
+
     A4B4 = ctl4.comm_lincombo(A4, B4)
     A4C4 = ctl4.comm_lincombo(A4, C4)
     B4C4 = ctl4.comm_lincombo(B4, C4)
+    B4A4 = ctl4.comm_lincombo(B4, A4)
+    C4A4 = ctl4.comm_lincombo(C4, A4)
+    C4B4 = ctl4.comm_lincombo(C4, B4)
+
     A5B5 = ctl5.comm_lincombo(A5, B5)
     A5C5 = ctl5.comm_lincombo(A5, C5)
     B5C5 = ctl5.comm_lincombo(B5, C5)
+    B5A5 = ctl5.comm_lincombo(B5, A5)
+    C5A5 = ctl5.comm_lincombo(C5, A5)
+    C5B5 = ctl5.comm_lincombo(C5, B5)
+
     A6B6 = ctl6.comm_lincombo(A6, B6)
     A6C6 = ctl6.comm_lincombo(A6, C6)
     B6C6 = ctl6.comm_lincombo(B6, C6)
-    A7B7 = ctl7.comm_lincombo(A7, B7)
-    A7C7 = ctl7.comm_lincombo(A7, C7)
-    B7C7 = ctl7.comm_lincombo(B7, C7)
-    A8B8 = ctl8.comm_lincombo(A8, B8)
-    A8C8 = ctl8.comm_lincombo(A8, C8)
-    B8C8 = ctl8.comm_lincombo(B8, C8)
+    B6A6 = ctl6.comm_lincombo(B6, A6)
+    C6A6 = ctl6.comm_lincombo(C6, A6)
+    C6B6 = ctl6.comm_lincombo(C6, B6)   
 
-    terms_A3B3 = group_by_pauli_string(A3B3)
-    terms_A3C3 = group_by_pauli_string(A3C3)
-    terms_B3C3 = group_by_pauli_string(B3C3)
-    terms_A4B4 = group_by_pauli_string(A4B4)
-    terms_A4C4 = group_by_pauli_string(A4C4)
-    terms_B4C4 = group_by_pauli_string(B4C4)
-    terms_A5B5 = group_by_pauli_string(A5B5)
-    terms_A5C5 = group_by_pauli_string(A5C5)
-    terms_B5C5 = group_by_pauli_string(B5C5)
-    terms_A6B6 = group_by_pauli_string(A6B6)
-    terms_A6C6 = group_by_pauli_string(A6C6)
-    terms_B6C6 = group_by_pauli_string(B6C6)
-    terms_A7B7 = group_by_pauli_string(A7B7)
-    terms_A7C7 = group_by_pauli_string(A7C7)
-    terms_B7C7 = group_by_pauli_string(B7C7)
-    terms_A8B8 = group_by_pauli_string(A8B8)
-    terms_A8C8 = group_by_pauli_string(A8C8)
-    terms_B8C8 = group_by_pauli_string(B8C8)
+
+    # 1/12
+    B3_B3A3 = ctl3.comm_lincombo(B3, B3A3)
+    B3_C3A3 = ctl3.comm_lincombo(B3, C3A3)
+    C3_B3A3 = ctl3.comm_lincombo(C3, B3A3)
+    C3_C3A3 = ctl3.comm_lincombo(C3, C3A3)
+    C3_C3B3 = ctl3.comm_lincombo(C3, C3B3)
+    # 1/24
+    A3_A3B3 = ctl3.comm_lincombo(A3, A3B3)
+    A3_A3C3 = ctl3.comm_lincombo(A3, A3C3)
+    B3_B3C3 = ctl3.comm_lincombo(B3, B3C3)
+    
+    # 1/12
+    B4_B4A4 = ctl4.comm_lincombo(B4, B4A4)
+    B4_C4A4 = ctl4.comm_lincombo(B4, C4A4)
+    C4_B4A4 = ctl4.comm_lincombo(C4, B4A4)
+    C4_C4A4 = ctl4.comm_lincombo(C4, C4A4)
+    C4_C4B4 = ctl4.comm_lincombo(C4, C4B4)
+    # 1/24
+    A4_A4B4 = ctl4.comm_lincombo(A4, A4B4)
+    A4_A4C4 = ctl4.comm_lincombo(A4, A4C4)
+    B4_B4C4 = ctl4.comm_lincombo(B4, B4C4)
+
+    # 1/12
+    B5_B5A5 = ctl5.comm_lincombo(B5, B5A5)
+    B5_C5A5 = ctl5.comm_lincombo(B5, C5A5)
+    C5_B5A5 = ctl5.comm_lincombo(C5, B5A5)
+    C5_C5A5 = ctl5.comm_lincombo(C5, C5A5)
+    C5_C5B5 = ctl5.comm_lincombo(C5, C5B5)
+    # 1/24
+    A5_A5B5 = ctl5.comm_lincombo(A5, A5B5)
+    A5_A5C5 = ctl5.comm_lincombo(A5, A5C5)
+    B5_B5C5 = ctl5.comm_lincombo(B5, B5C5)
+
+    # 1/12
+    B6_B6A6 = ctl6.comm_lincombo(B6, B6A6)
+    B6_C6A6 = ctl6.comm_lincombo(B6, C6A6)
+    C6_B6A6 = ctl6.comm_lincombo(C6, B6A6)
+    C6_C6A6 = ctl6.comm_lincombo(C6, C6A6)
+    C6_C6B6 = ctl6.comm_lincombo(C6, C6B6)
+    # 1/24
+    A6_A6B6 = ctl6.comm_lincombo(A6, A6B6)
+    A6_A6C6 = ctl6.comm_lincombo(A6, A6C6)
+    B6_B6C6 = ctl6.comm_lincombo(B6, B6C6)
+
+    # N=3
+    terms_B3_C3A3 = group_by_pauli_string(B3_C3A3, N=3)
+    terms_B3_B3A3 = group_by_pauli_string(B3_B3A3, N=3)
+    terms_C3_C3A3 = group_by_pauli_string(C3_C3A3, N=3)
+    terms_C3_B3A3 = group_by_pauli_string(C3_B3A3, N=3)
+    terms_A3_A3B3 = group_by_pauli_string(A3_A3B3, N=3)
+    terms_C3_C3B3 = group_by_pauli_string(C3_C3B3, N=3)
+    terms_B3_B3C3 = group_by_pauli_string(B3_B3C3, N=3)
+    terms_A3_A3C3 = group_by_pauli_string(A3_A3C3, N=3)
+
+    # N=4
+    terms_B4_C4A4 = group_by_pauli_string(B4_C4A4, N=4)
+    terms_B4_B4A4 = group_by_pauli_string(B4_B4A4, N=4)
+    terms_C4_C4A4 = group_by_pauli_string(C4_C4A4, N=4)
+    terms_C4_B4A4 = group_by_pauli_string(C4_B4A4, N=4)
+    terms_A4_A4B4 = group_by_pauli_string(A4_A4B4, N=4)
+    terms_C4_C4B4 = group_by_pauli_string(C4_C4B4, N=4)
+    terms_B4_B4C4 = group_by_pauli_string(B4_B4C4, N=4)
+    terms_A4_A4C4 = group_by_pauli_string(A4_A4C4, N=4)
+    
+    # N=5
+    terms_B5_C5A5 = group_by_pauli_string(B5_C5A5, N=5)
+    terms_B5_B5A5 = group_by_pauli_string(B5_B5A5, N=5)
+    terms_C5_C5A5 = group_by_pauli_string(C5_C5A5, N=5)
+    terms_C5_B5A5 = group_by_pauli_string(C5_B5A5, N=5)
+    terms_A5_A5B5 = group_by_pauli_string(A5_A5B5, N=5)
+    terms_C5_C5B5 = group_by_pauli_string(C5_C5B5, N=5)
+    terms_B5_B5C5 = group_by_pauli_string(B5_B5C5, N=5)
+    terms_A5_A5C5 = group_by_pauli_string(A5_A5C5, N=5)
+
+    # N=6
+    terms_B6_C6A6 = group_by_pauli_string(B6_C6A6, N=6)
+    terms_B6_B6A6 = group_by_pauli_string(B6_B6A6, N=6)
+    terms_C6_C6A6 = group_by_pauli_string(C6_C6A6, N=6)
+    terms_C6_B6A6 = group_by_pauli_string(C6_B6A6, N=6)
+    terms_A6_A6B6 = group_by_pauli_string(A6_A6B6, N=6)
+    terms_C6_C6B6 = group_by_pauli_string(C6_C6B6, N=6)
+    terms_B6_B6C6 = group_by_pauli_string(B6_B6C6, N=6)
+    terms_A6_A6C6 = group_by_pauli_string(A6_A6C6, N=6)
 
     # ----------------------------------------------------------------------------------------------------------
-    # compute contributions to the upper bound for the first order Trotter error according to Propostion 9
+    # compute contributions to the upper bound for the second order Trotter error according to Propostion 9
     # in https://journals.aps.org/prx/pdf/10.1103/PhysRevX.11.011020 or equation (5.3) of Overleaf file 
 
     dt_list = np.arange(1,10) * 0.1
 
+    terms12_3 = [terms_B3_B3A3, terms_B3_C3A3, terms_C3_B3A3, terms_C3_C3A3, terms_C3_C3B3]
+    terms12_4 = [terms_B4_B4A4, terms_B4_C4A4, terms_C4_B4A4, terms_C4_C4A4, terms_C4_C4B4] 
+    terms12_5 = [terms_B5_B5A5, terms_B5_C5A5, terms_C5_B5A5, terms_C5_C5A5, terms_C5_C5B5] 
+    terms12_6 = [terms_B6_B6A6, terms_B6_C6A6, terms_C6_B6A6, terms_C6_C6A6, terms_C6_C6B6] 
+
+    terms24_3 = [terms_A3_A3B3, terms_A3_A3C3, terms_B3_B3C3]
+    terms24_4 = [terms_A4_A4B4, terms_A4_A4C4, terms_B4_B4C4]
+    terms24_5 = [terms_A5_A5B5, terms_A5_A5C5, terms_B5_B5C5]
+    terms24_6 = [terms_A6_A6B6, terms_A6_A6C6, terms_B6_B6C6]
+
     err_vls = []
     for dt in dt_list:
         vls = []
-        vls.append(compute_fixed_t_commsum([terms_A3B3, terms_A3C3, terms_B3C3], couplings, dt, 3))
-        vls.append(compute_fixed_t_commsum([terms_A4B4, terms_A4C4, terms_B4C4], couplings, dt, 4)) 
-        vls.append(compute_fixed_t_commsum([terms_A5B5, terms_A5C5, terms_B5C5], couplings, dt, 5)) 
-        vls.append(compute_fixed_t_commsum([terms_A6B6, terms_A6C6, terms_B6C6], couplings, dt, 6)) 
-        vls.append(compute_fixed_t_commsum([terms_A7B7, terms_A7C7, terms_B7C7], couplings, dt, 7)) 
-        vls.append(compute_fixed_t_commsum([terms_A8B8, terms_A8C8, terms_B8C8], couplings, dt, 8)) 
+        vls.append(compute_fixed_t_commsum_T2(terms12_3, terms24_3, couplings, dt, 3))
+        vls.append(compute_fixed_t_commsum_T2(terms12_4, terms24_4, couplings, dt, 4)) 
+        vls.append(compute_fixed_t_commsum_T2(terms12_5, terms24_5, couplings, dt, 5)) 
+        vls.append(compute_fixed_t_commsum_T2(terms12_6, terms24_6, couplings, dt, 6)) 
         err_vls.append(vls)
 
     # ----------------------------------------------------------------------------------------------------------
-    # fit of first order error data points with a line (in log-log scale)  
+    # fit of second order error data points with a line (in log-log scale)  
 
-    N_vls = np.array([3, 4, 5, 6, 7, 8])
+    N_vls = np.array([3, 4, 5, 6])
     log_N_vls = np.log(N_vls)
     log_err_vls = [np.log(vls) for vls in err_vls]
     m_objects = []
@@ -255,7 +361,7 @@ def main():
         m_objects.append(m_obj)
 
     # ----------------------------------------------------------------------------------------------------------
-    # plot bound for the first order Trotter error as a function of N for various dt
+    # plot bound for the second order Trotter error as a function of N for various dt
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
 
@@ -266,7 +372,7 @@ def main():
         ax.scatter(log_N_vls, vls_dt, color=colors[i], marker='o', label=rf"$dt={dt_list[i]:.2f}$")
         ax.plot(log_N_vls, line(log_N_vls, m_objects[i].values[0], m_objects[i].values[1]), color=colors_line[i], linestyle="--")
 
-    ax.set_title (r"Comparison of first order Trotter error for varying $dt$.")
+    ax.set_title (r"Comparison of seoond order Trotter error for varying $dt$.")
     ax.set_xlabel(r"log number of qubits $log(N)$")
     ax.set_ylabel(r"$\log(\varepsilon_1)(dt)$")
     ax.set_xticks([np.log(n) for n in N_vls])
@@ -284,7 +390,7 @@ def main():
 
     plt.grid()
     plt.tight_layout()
-    fig.savefig(f'..\\plots\\T1_add_err_N_scaling\\first_order_N_scaling.pdf', dpi=300)
+    fig.savefig(f'..\\plots\\T2_add_err_N_scaling\\second_order_N_scaling.pdf', dpi=300)
     plt.close(fig)
 
     # ----------------------------------------------------------------------------------------------------------
@@ -295,19 +401,17 @@ def main():
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
 
     err_vls = []
-    err_vls.append([compute_fixed_t_commsum([terms_A3B3, terms_A3C3, terms_B3C3], couplings, dt, 3) for dt in dt_list])
-    err_vls.append([compute_fixed_t_commsum([terms_A4B4, terms_A4C4, terms_B4C4], couplings, dt, 4) for dt in dt_list])
-    err_vls.append([compute_fixed_t_commsum([terms_A5B5, terms_A5C5, terms_B5C5], couplings, dt, 5) for dt in dt_list])
-    err_vls.append([compute_fixed_t_commsum([terms_A6B6, terms_A6C6, terms_B6C6], couplings, dt, 6) for dt in dt_list])
-    err_vls.append([compute_fixed_t_commsum([terms_A7B7, terms_A7C7, terms_B7C7], couplings, dt, 7) for dt in dt_list])
-    err_vls.append([compute_fixed_t_commsum([terms_A8B8, terms_A8C8, terms_B8C8], couplings, dt, 8) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum_T2(terms12_3, terms24_3, couplings, dt, 3) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum_T2(terms12_4, terms24_4, couplings, dt, 4) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum_T2(terms12_5, terms24_5, couplings, dt, 5) for dt in dt_list])
+    err_vls.append([compute_fixed_t_commsum_T2(terms12_6, terms24_6, couplings, dt, 6) for dt in dt_list])
 
     for i, vls in enumerate(err_vls):
         ax.scatter(dt_list, vls, color=colors[i], marker='o', label=rf"$N={i+3}$")
 
-    ax.set_title (r"Comparison of first order Trotter error in terms of $dt$.")
+    ax.set_title (r"Comparison of second order Trotter error in terms of $dt$.")
     ax.set_xlabel(r"$dt$")
-    ax.set_ylabel(r"$\varepsilon_1(dt)$")
+    ax.set_ylabel(r"$\varepsilon_2(dt)$")
 
     legend = ax.legend(loc=2, frameon=True, borderaxespad=0.8, fontsize=6)
     legend.get_frame().set_facecolor('white')
@@ -316,7 +420,7 @@ def main():
 
     plt.grid()
     plt.tight_layout()
-    fig.savefig(f'..\\plots\\T1_add_err_N_scaling\\first_order_dt_scaling.pdf', dpi=300)
+    fig.savefig(f'..\\plots\\T2_add_err_N_scaling\\second_order_dt_scaling.pdf', dpi=300)
     plt.close(fig)
 
     # ----------------------------------------------------------------------------------------------------------
@@ -341,20 +445,26 @@ def main():
 
     H_Heisenberg = g12*(sx1*sx2 + sy1*sy2 + sz1*sz2) + g13*(sx1*sx3 + sy1*sy3 + sz1*sz3) + g23*(sx2*sx3 + sy2*sy3 + sz2*sz3)
 
-    E_Trotter1  = 0.25 * (sx1*sz2*sy3 + sz1*sx2*sy3) * (g12*g13+g12*g23-3*g13*g23)
-    E_Trotter1 += 0.25 * (sx1*sy2*sz3 + sz1*sy2*sz3) * (g12*g13+g13*g23-3*g12*g23)
-    E_Trotter1 += 0.25 * (sy1*sx2*sz3 + sy1*sz2*sx3) * (g12*g23+g13*g23-3*g12*g13)
+    E_Trotter2  = sx1*sx2 * (13*g12*g13**2/48 - 11*g13**2*g23/48 - 1*g12*g13*g23/24 + 13*g12*g23**2/48 - 11*g13*g23**2/48)
+    E_Trotter2 += sx1*sx3 * (13*g12**2*g13/48 - 11*g12**2*g23/48 - 1*g12*g13*g23/24 + 13*g13*g23**2/48 - 11*g12*g23**2/48)
+    E_Trotter2 += sx2*sx3 * (13*g12**2*g23/48 - 11*g12**2*g13/48 - 1*g12*g13*g23/24 + 13*g13**2*g23/48 - 11*g12*g13**2/48)
+    E_Trotter2 += sy1*sy2 * (1*g12*g13**2/12  - 1*g13**2*g23/24  - 1*g12*g13*g23/6  + 1*g12*g23**2/12  - 1*g13*g23**2/24 )
+    E_Trotter2 += sy1*sy3 * (1*g12**2*g13/12  - 1*g12**2*g23/24  - 1*g12*g13*g23/6  + 1*g13*g23**2/12  - 1*g12*g23**2/24 )
+    E_Trotter2 += sy2*sy3 * (1*g13**2*g23/12  - 1*g12**2*g13/24  - 1*g12*g13*g23/6  + 1*g12**2*g23/8   - 1*g12*g13**2/12 ) # different pattern
+    E_Trotter2 += sz1*sz2 * (13*g13**2*g23/48 + 13*g13**2*g23/48 - 1*g12*g13*g23/24 - 11*g12*g13**2/48 - 11*g12*g23**2/48)
+    E_Trotter2 += sz1*sz3 * (13*g12**2*g23/48 + 13*g12*g23**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g13/48 - 11*g13*g23**2/48)
+    E_Trotter2 += sz2*sz3 * (13*g12**2*g13/48 + 13*g12*g13**2/48 - 1*g12*g13*g23/24 - 11*g12**2*g23/48 - 11*g13**2*g23/48)
 
-    normA_Trotter1 = np.array([np.max(np.linalg.svd(((-1j*(H_Heisenberg + E_Trotter1*t)*t).expm() - (-1j*H_Heisenberg*t).expm()).full(), compute_uv=False)) for t in dt_list])
-    errvls3 = [compute_fixed_t_commsum([terms_A3B3, terms_A3C3, terms_B3C3], couplings, dt, 3) for dt in dt_list]
+    normA_Trotter2 = np.array([np.max(np.linalg.svd(((-1j*(H_Heisenberg + E_Trotter2*t*t)*t).expm() - (-1j*H_Heisenberg*t).expm()).full(), compute_uv=False)) for t in dt_list])
+    errvls3 = [compute_fixed_t_commsum_T2(terms12_3, terms24_3, couplings, dt, 3) for dt in dt_list]
 
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches(16 / 2.54, 10 / 2.54)
 
     ax.scatter(dt_list, errvls3, color="#0026FF", marker='o', label=rf"Numerical bound")
-    ax.scatter(dt_list, normA_Trotter1, color="#F700FF", marker='o', label=rf"Simulation")
+    ax.scatter(dt_list, normA_Trotter2, color="#F700FF", marker='o', label=rf"Simulation")
 
-    ax.set_title (r"Compare simulation and numerical bounds for first order Trotter error for N=3.")
+    ax.set_title (r"Compare simulation and numerical bounds for second order Trotter error for N=3.")
     ax.set_xlabel(r"$dt$")
     ax.set_ylabel(r"$\varepsilon_1(dt)$")
 
@@ -365,7 +475,7 @@ def main():
 
     plt.grid()
     plt.tight_layout()
-    fig.savefig(f'..\\plots\\T1_add_err_N_scaling\\N3_scalings.pdf', dpi=300)
+    fig.savefig(f'..\\plots\\T2_add_err_N_scaling\\N3_scalings.pdf', dpi=300)
     plt.close(fig)
 
 if __name__ == "__main__":

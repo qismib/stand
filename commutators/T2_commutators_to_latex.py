@@ -166,7 +166,7 @@ def dict_to_latex(terms, title):
     latex_str = f"{title}="
     for key, value in terms.items():
         temp = "\\left|"
-        for elem in value:
+        for i, elem in enumerate(value):
             ref_coeff = clean_coeff(elem[1])
             temp += str_to_latex_frac(elem[0])
             if "(" not in str_to_latex_frac(elem[0]) or ")" not in str_to_latex_frac(elem[0]): raise Exception(f"something wrong: {str_to_latex_frac(elem[0])}")
@@ -176,12 +176,12 @@ def dict_to_latex(terms, title):
                 else:
                     temp += f"g_{{{coeff[0]}}}^{coeff[1]}"
 
-            if elem is not value[-1]: temp += "+" 
+            if i != len(value)-1: temp += "+" 
 
         temp += pstr_to_subscript(key) 
         latex_str += temp + "\n"
 
-    return latex_str
+    return latex_str.strip("+\n")
 
 # ---------- group_by_pauli_string(comm) ----------
 
