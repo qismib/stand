@@ -121,7 +121,7 @@ def main():
 
     # Compare scaling of additive Trotter error with different choices of r at fixed evolution time T
 
-    T = 10
+    T = 20
     rlist = np.concatenate([np.array([1, 5]), np.linspace(10, 1000, 10)]) # ordered list
 
     fig, ax = plt.subplots(1, 1)
