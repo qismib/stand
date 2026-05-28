@@ -440,27 +440,99 @@ def eval_additive_error_term_T2_triang(couplings, N):
 
     err_vl = 0
 
-    for j in range(1, N+1):
-        for k in range(j+1, N+1):
-            for p in range(1, N+1):
-                for q in range(p+1, N+1):
-                    for m in range(1, N+1):
-                        for n in range(m+1, N+1):
+    #for j in range(1, N+1):
+    #    for k in range(j+1, N+1):
+    #        for p in range(1, N+1):
+    #            for q in range(p+1, N+1):
+    #                for m in range(1, N+1):
+    #                    for n in range(m+1, N+1):
+    #
+    #                        if len({p, q}.intersection({m, n})) != 1:
+    #                            continue
+    #
+    #                        if len({j, k}.intersection({p, q, m, n})) == 0:
+    #                            continue
+    #                            # TODO: this condition needs refinement
+    #   
+    #                        err_vl += eval_couplings(f"(g{j}_{k})(g{p}_{q})(g{m}_{n})", couplings)
 
-                            if len({p, q}.intersection({m, n})) != 1:
-                                continue
+    pairs = [(a, b) for a in range(1, N+1) for b in range(a+1, N+1)]
 
-                            if len({j, k}.intersection({p, q, m, n})) == 0:
-                                continue
-                                # TODO: this condition needs refinement
+    for j, k in pairs:
+        jk = {j, k}
+        for p, q in pairs:
+            pq = {p, q}
+            for m, n in pairs:
+                mn = {m, n}
+                if len(pq & mn) != 1:
+                    continue
+                if not (jk & (pq | mn)):
+                    continue
+                err_vl += eval_couplings(f"(g{j}_{k})(g{p}_{q})(g{m}_{n})", couplings)
 
-                            err_vl += eval_couplings(f"(g{j}_{k})(g{p}_{q})(g{m}_{n})", couplings)
-
-    C = 108
+    C = 18
     err_vl *= C
 
     return err_vl
 
+def eval_additive_error_term_T2_triang_alt(couplings, N):
+
+    def eval_couplings(coeff_str, coupl_dict):
+        split_str = coeff_str.split(")(")
+        split_str = [p.strip(')').strip('(') for p in split_str]
+
+        prod = 1
+        for term in split_str:
+            prod *= coupl_dict[term]
+        return prod
+
+    err_vl = 0
+
+    for p in range(1, N+1):
+        for q in range(p+1, N+1):
+
+            for m in range(1, N+1):
+                for n in range(m+1, N+1):
+
+                    shared = {p, q}.intersection({m, n})
+                    if len(shared) != 1:
+                        continue
+
+                    shared = list(shared)[0]
+
+                    r = list(({p, q} - {shared}))[0]
+                    t = list(({m, n} - {shared}))[0]
+
+                    support = {shared, r, t}
+
+                    # outer loop
+                    for j in range(1, N+1):
+                        for k in range(j+1, N+1):
+
+                            if len({j, k}.intersection(support)) == 0:
+                                continue
+
+                            err_vl += eval_couplings(
+                                f"(g{j}_{k})(g{p}_{q})(g{m}_{n})",
+                                couplings
+                            )
+
+    C = 36   # or refined later
+    return C * err_vl
+
+def eval_additive_error_term_T2_vertex(couplings, N):
+    degrees = [0.0] * (N + 1)
+
+    for i in range(1, N + 1):
+        for j in range(i + 1, N + 1):
+            g = abs(couplings[f"g{i}_{j}"])
+            degrees[i] += g
+            degrees[j] += g
+
+    total = sum(d**3 for d in degrees[1:])
+    C = 36
+
+    return C * total
 
 def theta_nu(N, i, j, vl):
     return np.arccos(vl) * abs(i-j) / (N-1)
